@@ -74,7 +74,7 @@ try {
 
     # Open the extracted folder
     Log-Message "Opening extracted folder..."
-    Start-Process -FilePath explorer.exe -ArgumentList $extractedFolderPath -Verb RunAs
+    Start-Process -FilePath explorer.exe -ArgumentList $extractedFolderPath
 
     # Define the path to the EXE file within the extracted folder
     $exeFilePath = Join-Path $extractedFolderPath "autoplay.exe"
