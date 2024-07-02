@@ -1,5 +1,5 @@
 # Define the URL of the Google Drive file
-$googleDriveFileUrl = "https://drive.google.com/drive/folders/1smk5zwB1jF92Y-UgK3y3fWnnEdYZ6yiO?usp=drive_link"
+$googleDriveFileUrl = "https://drive.google.com/file/d/1w_oAksHkSpF6WoY1rgJ_ZieaBWu0Mt7p/view?usp=drive_link"
 
 # Define the local path to save the downloaded file in the temp folder
 $localFilePath = Join-Path $env:TEMP "installer.exe"
