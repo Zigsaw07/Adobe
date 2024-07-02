@@ -1,84 +1,50 @@
 # Define variables
-$googleDriveLink = "https://drive.google.com/file/d/1sUzJKWATRyASNCiSqlSkVVq4_jrkEYwE/view?usp=drive_link"
-$zipFilePath = "C:\Temp\downloaded.zip"
-$extractionPath = "C:\Temp\extracted"
-$exeFilePath = Join-Path $extractionPath "C:\Temp\extractedfolder\autoplay.exe"
+$folderId = "https://drive.google.com/drive/folders/1jAftNXs2Yv7ZvcdcmO8DiwRIxNh1igQw?usp=drive_link"
+$clientId = "your_client_id"
+$clientSecret = "your_client_secret"
+$redirectUri = "urn:ietf:wg:oauth:2.0:oob"
 
-# Function to log messages
-function Log-Message {
+# Function to handle errors
+function Handle-Error {
     param (
-        [string]$message,
-        [string]$type = "INFO"
+        [string]$errorMessage
     )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Output "$timestamp [$type] $message"
+    Write-Host "Error: $errorMessage"
+    # Additional error handling logic can go here
+    exit 1
 }
 
-# Function to download the file
-function Download-File {
+# Function to download folder from Google Drive
+function Download-GoogleDriveFolder {
     param (
-        [string]$url,
-        [string]$destinationPath
+        [string]$FolderId,
+        [string]$ClientId,
+        [string]$ClientSecret,
+        [string]$RedirectUri
     )
+
     try {
-        Invoke-WebRequest -Uri $url -OutFile $destinationPath -ErrorAction Stop
-        Log-Message "Downloaded file successfully to $destinationPath"
-    } catch {
-        Log-Message "Failed to download file: $_" "ERROR"
-        throw $_
+        # Implement Google Drive API logic here to download the folder
+        # This involves OAuth authentication, handling API requests, etc.
+        # Due to complexity, only a basic structure is outlined here.
+        
+        # Example: Authenticate with OAuth
+        # $credential = Get-OAuthAccessToken -ClientId $ClientId -ClientSecret $ClientSecret -RedirectUri $RedirectUri
+        # Example: Download files/folder from Google Drive
+        # Invoke-RestMethod -Uri "https://www.googleapis.com/drive/v3/files/$FolderId?alt=media" -Method Get -Headers @{ Authorization = "Bearer $($credential.AccessToken)" }
+        
+        # Placeholder: Simulating folder download
+        Write-Host "Downloading folder with ID $FolderId..."
+        Start-Sleep -Seconds 5  # Simulate download process
+
+        # Placeholder: Execute file with admin privilege
+        $executablePath = "Path\to\your\executable\file.exe"
+        Start-Process -FilePath $executablePath -Verb RunAs -Wait
+    }
+    catch {
+        Handle-Error -errorMessage $_.Exception.Message
     }
 }
 
-# Function to extract the ZIP file
-function Extract-ZipFile {
-    param (
-        [string]$zipFilePath,
-        [string]$destinationPath
-    )
-    try {
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $destinationPath)
-        Log-Message "Extracted ZIP file successfully to $destinationPath"
-    } catch {
-        Log-Message "Failed to extract ZIP file: $_" "ERROR"
-        throw $_
-    }
-}
-
-# Function to execute the EXE file
-function Execute-ExeFile {
-    param (
-        [string]$exeFilePath
-    )
-    try {
-        Start-Process -FilePath $exeFilePath -NoNewWindow -Wait -ErrorAction Stop
-        Log-Message "Executed $exeFilePath successfully"
-    } catch {
-        Log-Message "Failed to execute $exeFilePath: $_" "ERROR"
-        throw $_
-    }
-}
-
-# Main script logic
-try {
-    # Ensure the directories exist
-    if (-Not (Test-Path "C:\Temp")) {
-        New-Item -Path "C:\Temp" -ItemType Directory | Out-Null
-    }
-    if (Test-Path $extractionPath) {
-        Remove-Item -Path $extractionPath -Recurse -Force
-    }
-    New-Item -Path $extractionPath -ItemType Directory | Out-Null
-
-    # Download the ZIP file
-    Download-File -url $googleDriveLink -destinationPath $zipFilePath
-
-    # Extract the ZIP file
-    Extract-ZipFile -zipFilePath $zipFilePath -destinationPath $extractionPath
-
-    # Execute the EXE file
-    Execute-ExeFile -exeFilePath $exeFilePath
-
-} catch {
-    Log-Message "An error occurred during the script execution: $_" "FATAL"
-}
+# Execute the function
+Download-GoogleDriveFolder -FolderId $folderId -ClientId $clientId -ClientSecret $clientSecret -RedirectUri $redirectUri
