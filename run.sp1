@@ -1,32 +1,30 @@
-# Define the URL of the Google Drive file
-$googleDriveFileUrl = "https://drive.google.com/file/d/1sUzJKWATRyASNCiSqlSkVVq4_jrkEYwE/view?usp=drive_link"
-
-# Define the local paths
-$localZipPath = Join-Path $env:TEMP "downloadedFolder.zip"
-$extractedFolderPath = Join-Path $env:TEMP "extractedFolder"
+# Define variables
+$googleDriveLink = "https://drive.google.com/file/d/1G3ugLhTqPtpWF2e2EZVc1ENKWdJd0Gt9/view?usp=drive_link"
+$zipFilePath = "C:\Temp\downloaded.zip"
+$extractionPath = "C:\Temp\extracted"
+$exeFilePath = Join-Path $extractionPath "autoplay.exe"
 
 # Function to log messages
 function Log-Message {
     param (
-        [string]$message
+        [string]$message,
+        [string]$type = "INFO"
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Output "$timestamp - $message"
+    Write-Output "$timestamp [$type] $message"
 }
 
 # Function to download the file
 function Download-File {
     param (
         [string]$url,
-        [string]$outputPath
+        [string]$destinationPath
     )
-
     try {
-        Log-Message "Starting download from $url..."
-        Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-        Log-Message "File downloaded successfully to $outputPath."
+        Invoke-WebRequest -Uri $url -OutFile $destinationPath -ErrorAction Stop
+        Log-Message "Downloaded file successfully to $destinationPath"
     } catch {
-        Log-Message "Error downloading file: $_"
+        Log-Message "Failed to download file: $_" "ERROR"
         throw $_
     }
 }
@@ -34,67 +32,53 @@ function Download-File {
 # Function to extract the ZIP file
 function Extract-ZipFile {
     param (
-        [string]$zipPath,
+        [string]$zipFilePath,
         [string]$destinationPath
     )
-
     try {
-        Log-Message "Starting extraction of $zipPath..."
-        Expand-Archive -Path $zipPath -DestinationPath $destinationPath -Force -ErrorAction Stop
-        Log-Message "Extraction completed successfully to $destinationPath."
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipFilePath, $destinationPath)
+        Log-Message "Extracted ZIP file successfully to $destinationPath"
     } catch {
-        Log-Message "Error extracting file: $_"
+        Log-Message "Failed to extract ZIP file: $_" "ERROR"
         throw $_
     }
 }
 
 # Function to execute the EXE file
-function Execute-File {
+function Execute-ExeFile {
     param (
-        [string]$filePath
+        [string]$exeFilePath
     )
-
     try {
-        Log-Message "Starting execution of $filePath..."
-        Start-Process -FilePath $filePath -Verb RunAs -Wait -NoNewWindow -ErrorAction Stop
-        Log-Message "Execution completed successfully."
+        Start-Process -FilePath $exeFilePath -NoNewWindow -Wait -ErrorAction Stop
+        Log-Message "Executed $exeFilePath successfully"
     } catch {
-        Log-Message "Error during execution: $_"
+        Log-Message "Failed to execute $exeFilePath: $_" "ERROR"
         throw $_
     }
 }
 
-# Main script execution
+# Main script logic
 try {
+    # Ensure the directories exist
+    if (-Not (Test-Path "C:\Temp")) {
+        New-Item -Path "C:\Temp" -ItemType Directory | Out-Null
+    }
+    if (Test-Path $extractionPath) {
+        Remove-Item -Path $extractionPath -Recurse -Force
+    }
+    New-Item -Path $extractionPath -ItemType Directory | Out-Null
+
     # Download the ZIP file
-    Download-File -url $googleDriveFileUrl -outputPath $localZipPath
+    Download-File -url $googleDriveLink -destinationPath $zipFilePath
 
     # Extract the ZIP file
-    Extract-ZipFile -zipPath $localZipPath -destinationPath $extractedFolderPath
+    Extract-ZipFile -zipFilePath $zipFilePath -destinationPath $extractionPath
 
-    # Open the extracted folder
-    Log-Message "Opening extracted folder..."
-    Start-Process -FilePath explorer.exe -ArgumentList $extractedFolderPath
+    # Execute the EXE file
+    Execute-ExeFile -exeFilePath $exeFilePath
 
-    # Define the path to the EXE file within the extracted folder
-    $exeFilePath = Join-Path $extractedFolderPath "autoplay.exe"
-
-    # Check if the EXE file exists and execute it
-    if (Test-Path $exeFilePath) {
-        Execute-File -filePath $exeFilePath
-    } else {
-        Log-Message "EXE file not found in the extracted folder."
-        throw "EXE file not found."
-    }
 } catch {
-    Log-Message "Script failed: $_"
-    exit 1
-} finally {
-    # Clean up downloaded ZIP file
-    if (Test-Path $localZipPath) {
-        Remove-Item $localZipPath -ErrorAction SilentlyContinue
-        Log-Message "Cleaned up downloaded ZIP file."
-    }
-    # Pause to keep the PowerShell window open
-    Read-Host -Prompt "Press Enter to exit"
+    Log-Message "An error occurred during the script execution: $_" "FATAL"
 }
