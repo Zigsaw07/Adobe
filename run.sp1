@@ -1,5 +1,5 @@
 # Define variables
-$googleDriveLink = "https://drive.google.com/file/d/1G3ugLhTqPtpWF2e2EZVc1ENKWdJd0Gt9/view?usp=drive_link"
+$googleDriveLink = "https://drive.google.com/file/d/1sUzJKWATRyASNCiSqlSkVVq4_jrkEYwE/view?usp=drive_link"
 $zipFilePath = "C:\Temp\downloaded.zip"
 $extractionPath = "C:\Temp\extracted"
 $exeFilePath = Join-Path $extractionPath "autoplay.exe"
