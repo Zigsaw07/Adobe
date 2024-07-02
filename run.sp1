@@ -2,7 +2,7 @@
 $googleDriveLink = "https://drive.google.com/file/d/1sUzJKWATRyASNCiSqlSkVVq4_jrkEYwE/view?usp=drive_link"
 $zipFilePath = "C:\Temp\downloaded.zip"
 $extractionPath = "C:\Temp\extracted"
-$exeFilePath = Join-Path $extractionPath "autoplay.exe"
+$exeFilePath = Join-Path $extractionPath "C:\Temp\extracted\autoplay.exe"
 
 # Function to log messages
 function Log-Message {
